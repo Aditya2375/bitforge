@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="An original C RV32I instruction emulator. Step through real WebAssembly execution, inspect registers, set breakpoints and trace every change."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; font-src 'none'; connect-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light" />
+    <title>bitforge / A CPU, one instruction at a time</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#workbench">Skip to emulator</a>
+    <div class="shell">
+      <header>
+        <a class="brand" href="./" aria-label="bitforge home"
+          ><span class="brand-icon" aria-hidden="true">b/</span>bitforge<span
+            class="edition"
+            >RV32I / C</span
+          ></a
+        ><a href="https://github.com/Aditya2375/bitforge" class="source"
+          >Read the source <span aria-hidden="true">↗</span></a
+        >
+      </header>
+      <main>
+        <section class="intro" aria-labelledby="title">
+          <div>
+            <p class="eyebrow">THE INSTRUCTION LAB / NO BLACK BOXES</p>
+            <h1 id="title">
+              One instruction.<br /><span>Nothing hidden.</span>
+            </h1>
+            <p class="lede">
+              A small CPU with its workings in the open. Follow a program from
+              bits to branches, one real instruction at a time.
+            </p>
+          </div>
+          <div class="intro-note">
+            <span class="status-dot" aria-hidden="true"></span
+            ><strong>C core. Real execution.</strong>
+            <p>
+              The native emulator, compiled to WebAssembly. No remote machine.
+              No canned results.
+            </p>
+            <div class="specs">
+              <span>32 registers</span><span>64 KiB RAM</span
+              ><span>40 base instructions</span>
+            </div>
+          </div>
+        </section>
+        <noscript
+          ><p class="error">
+            JavaScript and WebAssembly are required to run this emulator. The C
+            source and native CLI are available in the repository.
+          </p></noscript
+        >
+        <section id="workbench" class="workbench" aria-labelledby="lab-title">
+          <div class="lab-head">
+            <div>
+              <p class="eyebrow">01 / EXECUTION WORKBENCH</p>
+              <h2 id="lab-title">Watch the machine think.</h2>
+            </div>
+            <div class="runtime" id="runtime">Loading C core…</div>
+          </div>
+          <div class="program-head">
+            <label for="preset"
+              >Program
+              <select id="preset" disabled></select
+            ></label>
+            <div class="controls">
+              <button id="reset" class="quiet" disabled>Reset</button
+              ><button id="step" disabled>
+                Step <span aria-hidden="true">→</span></button
+              ><button id="run" class="primary" disabled>
+                Run <span aria-hidden="true">▶</span>
+              </button>
+            </div>
+          </div>
+          <p class="program-brief" id="program-brief"></p>
+          <div class="work-grid">
+            <section class="code-panel" aria-labelledby="code-title">
+              <div class="panel-head">
+                <h3 id="code-title">Instruction memory</h3>
+                <span>click ● to break</span>
+              </div>
+              <div class="listing-wrap">
+                <table class="listing">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <span class="sr-only">Breakpoint</span>
+                      </th>
+                      <th scope="col">PC</th>
+                      <th scope="col">WORD</th>
+                      <th scope="col">DECODED</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listing"></tbody>
+                </table>
+              </div>
+              <div class="code-footer">
+                <span id="loaded-count">0 words</span
+                ><span class="listing-pages"
+                  ><button
+                    id="listing-prev"
+                    aria-label="Previous 64-instruction page"
+                    disabled
+                  >
+                    ←</button
+                  ><button
+                    id="listing-next"
+                    aria-label="Next 64-instruction page"
+                    disabled
+                  >
+                    →
+                  </button></span
+                >
+              </div>
+            </section>
+            <section class="execution-panel" aria-labelledby="execution-title">
+              <div class="panel-head">
+                <h3 id="execution-title">Live execution</h3>
+                <span id="position">PC 00000000</span>
+              </div>
+              <div class="instruction-card">
+                <p id="instruction-kind" class="eyebrow">Waiting for core</p>
+                <div id="instruction" class="instruction">…</div>
+                <div id="instruction-args" class="instruction-args"></div>
+              </div>
+              <div class="encoding">
+                <span>ENCODED / 31 → 0</span
+                ><code id="bits">0000000 00000 00000 000 00000 0000000</code>
+              </div>
+              <div class="datapath" aria-label="Machine execution state">
+                <div>
+                  <span>PROGRAM COUNTER</span><strong id="pc">00000000</strong>
+                </div>
+                <span class="path-arrow" aria-hidden="true">→</span>
+                <div>
+                  <span>NEXT WORD</span><strong id="word">00000000</strong>
+                </div>
+              </div>
+              <div class="state-strip">
+                <div><span>RETIRED</span><strong id="retired">0</strong></div>
+                <div>
+                  <span>STATE</span><strong id="machine-state">Ready</strong>
+                </div>
+              </div>
+              <div class="receipt">
+                <span class="eyebrow">LAST INSTRUCTION RECEIPT</span>
+                <p id="receipt">Step to see the exact state change.</p>
+              </div>
+            </section>
+          </div>
+          <div id="notice" class="notice" role="status" aria-live="polite">
+            Starting emulator…
+          </div>
+          <div class="program-detail">
+            <p id="program-explain"></p>
+            <p id="expected" class="expected"></p>
+          </div>
+          <details id="editor">
+            <summary>
+              Load your own machine words <span>HEX / RV32I</span>
+            </summary>
+            <div class="editor-body">
+              <p id="editor-help">
+                One 8-digit hexadecimal word per line. Optional # comments. Up
+                to 16,384 words. Loads at address zero, clears RAM and
+                registers. This is machine code, not assembly.
+              </p>
+              <label for="program-input">Program words</label
+              ><textarea
+                id="program-input"
+                aria-describedby="editor-help input-error"
+                spellcheck="false"
+                autocapitalize="off"
+                autocomplete="off"
+                rows="10"
+              ></textarea>
+              <p id="input-error" class="error" role="alert"></p>
+              <button id="load" disabled>Load program</button>
+            </div>
+          </details>
+        </section>
+        <section class="register-section" aria-labelledby="register-title">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">02 / REGISTER FILE</p>
+              <h2 id="register-title">Thirty-two places to keep a thought.</h2>
+            </div>
+            <label for="number-format" class="small-control"
+              >Display
+              <select id="number-format">
+                <option value="hex">Hexadecimal</option>
+                <option value="signed">Signed decimal</option>
+                <option value="unsigned">Unsigned decimal</option>
+              </select></label
+            >
+          </div>
+          <p class="section-note">
+            Orange marks the last register written. x0 always reads zero. ABI
+            names are labels, not special behavior.
+          </p>
+          <div
+            id="registers"
+            class="register-grid"
+            aria-label="All 32 integer registers"
+          ></div>
+        </section>
+        <section class="lower-grid">
+          <div class="memory-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">03 / BYTE-ADDRESSABLE RAM</p>
+                <h2>Every byte accounted for.</h2>
+              </div>
+            </div>
+            <form id="memory-form" class="memory-controls">
+              <label for="memory-address"
+                >Page address (hex)
+                <input
+                  id="memory-address"
+                  value="0400"
+                  maxlength="8"
+                  spellcheck="false"
+                  inputmode="text"
+                  aria-describedby="memory-help memory-error" /></label
+              ><button type="submit">Inspect</button
+              ><button
+                type="button"
+                id="memory-prev"
+                aria-label="Previous 64-byte page"
+              >
+                ←</button
+              ><button
+                type="button"
+                id="memory-next"
+                aria-label="Next 64-byte page"
+              >
+                →
+              </button>
+            </form>
+            <p id="memory-help" class="section-note">
+              64 bytes per page. Addresses round down to a 64-byte boundary.
+            </p>
+            <p id="memory-error" class="error" role="alert"></p>
+            <div class="memory-wrap">
+              <table class="memory">
+                <caption id="memory-caption">
+                  RAM / 00000400-0000043f
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">ADDRESS</th>
+                    <th scope="col">+0</th>
+                    <th scope="col">+1</th>
+                    <th scope="col">+2</th>
+                    <th scope="col">+3</th>
+                    <th scope="col">+4</th>
+                    <th scope="col">+5</th>
+                    <th scope="col">+6</th>
+                    <th scope="col">+7</th>
+                  </tr>
+                </thead>
+                <tbody id="memory"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="trace-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">04 / EXECUTION TRACE</p>
+                <h2>Leave a paper trail.</h2>
+              </div>
+              <span id="trace-count" class="tag">0 events</span>
+            </div>
+            <p class="section-note">
+              The last 32 attempted instructions, newest first. Trapping
+              instructions do not retire.
+            </p>
+            <ol id="trace" class="trace">
+              <li class="empty">No instructions executed yet.</li>
+            </ol>
+          </div>
+        </section>
+        <section class="contract" aria-labelledby="contract-title">
+          <div>
+            <p class="eyebrow">KNOW THE BOUNDARY</p>
+            <h2 id="contract-title">A core, not a whole computer.</h2>
+          </div>
+          <div>
+            <p>
+              RV32I v2.1, instruction-level, single hart. A flat 64 KiB
+              read/write/execute RAM. No compressed, multiplication, atomics,
+              floating point, CSRs, privilege modes, devices, ELF loader or
+              operating system.
+            </p>
+            <p>
+              Misaligned accesses trap. FENCE is a no-op in this single-hart
+              environment. ECALL and EBREAK stop precisely at the instruction;
+              use Reset to resume. Other reserved encodings trap as illegal.
+              This is not a cycle-accurate model or an ISA certification.
+            </p>
+            <p>
+              A run is limited to 10,000 attempted instructions, in short
+              pausable batches. All programs stay in this page. Nothing is
+              uploaded or saved.
+            </p>
+            <a
+              href="https://docs.riscv.org/reference/isa/v20260120/unpriv/rv32.html"
+              >Read the governing RV32I specification ↗</a
+            >
+          </div>
+        </section>
+      </main>
+      <footer>
+        <span>bitforge / made to be understood</span
+        ><span>Original C core · MIT OR Apache-2.0</span
+        ><a href="https://github.com/Aditya2375/bitforge"
+          >Source &amp; native CLI ↗</a
+        >
+      </footer>
+    </div>
+  </body>
+</html>

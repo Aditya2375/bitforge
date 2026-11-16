@@ -1,0 +1,12 @@
+/build/
+/node_modules/
+*.o
+*.so
+*.log
+*research*
+*evidence*
+*SECURITY_REVIEW*
+*DESIGN*
+*checkpoint*
+*lessons*
+*.tar.gz
